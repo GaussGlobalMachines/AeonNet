@@ -45,7 +45,7 @@ Next Steps >>
 - Deployment to Integration Environment
 - Development of Web Application
 
-## Weekly Report - 26th December to 1st December
+## Weekly Report - 26th December to 1st January
 
 - UX Development in Progress >>
 - Contract Optimisation in Progress >>
