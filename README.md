@@ -22,7 +22,7 @@ AeonNet is a Trading Time Value Tokenisation Platform deployed on Aeternity Appl
 - NPM
 
 ## What is next
-- Integration of NFTs with the Time locked Dynamic Decentralised Exchange
+- Completion of UI and UX for the Versatile Value Token Exchange
 
 ## References on Time Locks
 - Hashed Time Locked Contracts > https://www.investopedia.com/terms/h/hashed-timelock-contract.asp
