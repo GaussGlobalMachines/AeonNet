@@ -47,8 +47,8 @@ Next Steps >>
 
 ## Weekly Report - 26th July to 1st August
 
-- UI Development in Progress >>
-- UI Documentation in Progress >>
+- UX Development in Progress >>
+- Contract Optimisation in Progress >>
 
 Next Steps >>
 
