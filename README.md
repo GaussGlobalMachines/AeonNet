@@ -9,6 +9,9 @@ AeonNet is a Trading Time Value Tokenisation Platform deployed on Aeternity Appl
 - The dimensions of time are different on the blockchain and off the blockchain
 - Non Fungible Tokens have different short term and long term values
 
+## Screenshots
+<img width="1440" alt="Screenshot 2022-01-24 at 2 37 26 AM" src="https://user-images.githubusercontent.com/61057538/150698300-be75cb69-cb2f-4668-a41b-be5e6a1531b0.png">
+
 ## Components
 - Hash Time Locks implemented through the Time Stamping Transactions in a Blockchain
 - Time Value Token created as a Non Fungible Token in the Aeternity Token Standard
