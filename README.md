@@ -4,7 +4,10 @@ AeonNet is a Trading Time Value Tokenisation Platform deployed on Aeternity Appl
 ## Summary
 - Dynamic Time Tokens Powered by Aeternity Architecture based Hash Time Locked Contracts (HTLC). 
 
-## Concept
+## Context
+We consider every non-fungible activities on real world assets as skills. A good example could be the songs as real world assets and singing as a skill. Another example for our consideration is resume as a real world asset and resume writing as a skill. A software program can be an asset and programming is a skill. Through this skill exchange, we want to create a liquid market where people can trade the real world assets in real time by providing tokenised skills in a time locked manner. Gig workforce can initially add their asset data and metadata into the decentralised application and then see the popularity of their assets in the platform. Once they receive a significant and sufficient threshold of rating for the assets, they can enter the skill exchange, by minting the time locked skill token. Once the skill token is minted, they can tokenise the assets and subsequently trade the skills and assets together or separately. Thus there will be two type of tokens per gig worker - skill token and asset token. Time locking is a very important capability for tokenising skills in the gig economy in context of web3 as decentralised digital workforce are not bound to any organisation for unlimited time.
+
+## Concepts
 - Hash Time Lock Contract concept is one of the earlier tenets of decentralised exchanges
 - The dimensions of time are different on the blockchain and off the blockchain
 - Non Fungible Tokens have different short term and long term values
@@ -19,7 +22,7 @@ AeonNet is a Trading Time Value Tokenisation Platform deployed on Aeternity Appl
 
 ## Tools
 - Aeternity Node
-- Aeternity Smart Contracts
+- Aeternity Contracts
 - Aeternity SDK
 - NodeJS
 - NPM
