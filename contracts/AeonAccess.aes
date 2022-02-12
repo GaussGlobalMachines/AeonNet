@@ -1,5 +1,7 @@
 @compiler >= 6
 
+include "Option.aes"
+
 contract AeonAccess =
 
 	record state =
