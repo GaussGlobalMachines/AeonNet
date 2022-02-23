@@ -1,188 +1,106 @@
-// state is handled for the storing the elements on blockchain
-// deployment of token with  NFT Token name or NFT Token symbol
 
-contract TimeLockToken =
+@compiler >= 6
 
-  record state = { 
-    name: string,
-    symbol: string,
-    owner: address,
-    _totalSupply : int,
-    _nextTokenId: int,
-    assetProperties: map(int, properties),
-    map_owned_tokens_count: map(address, int),
-    map_token_owner: map(int, address),
-    map_token_approvals: map(int, address),
-    map_operator_approvals: map(address, map(address, bool)),
-    map_token_uris: map(int, string)}
-   
-   //struct of properties 
-  record properties ={
-    InitialPrice : int,
-    useTime : int,
-    lockTime : int,
-    isContinous : bool,
-    stage_1 : bool,
-    stage_2 :  bool,
-    stage_3 : bool}
-  
-  stateful entrypoint init(name: string, symbol: string, owner: address) = {
-  	name = name,
-  	symbol = symbol,
-    owner = owner,
-    _totalSupply=0,
-    _nextTokenId=1,
-    assetProperties = {},
-  	map_owned_tokens_count = {},
-  	map_token_owner = {},
-  	map_token_approvals = {},
-    map_operator_approvals = {},
-    map_token_uris = {}}
+include "String.aes"
 
-  // return the name of NFT Token
+contract AeonTimeToken =
 
-  entrypoint name() : string =
-    state.name
+    record state = {
+        name : string,
+        token_owner : map(string, address), 
+        token_owns : map(address, int), 
+        token_approvals: map(string, address),
+        token_own_names: map(address, list(map(string, bool))) // true if that token is still holding
+        }
 
- // return the symbol of the nonFungible Token
 
-  entrypoint symbol() : string =
-    state.symbol
+    stateful entrypoint init(name : string) = 
+        { name = name,
+            token_owner = {},
+            token_owns = {},
+            token_approvals = {},
+            token_own_names = {}}
+
+    entrypoint getName() =
+        state.name
+
+    // get owner
+    public entrypoint ownerOfToken(_token_id: string) : option(address) =
+        Map.lookup(_token_id, state.token_owner)
     
-  //  Returns the total number of tokens  
-  entrypoint totalSupply() : int=
-    state._totalSupply
-    
-  // Returns the token id of the next minted token  
-  entrypoint nextTokenID() : int=
-    state._nextTokenId
-    
-  // return total supply of the address
-  entrypoint balance_of(token_owner: address) : int =
-    Map.lookup_default(token_owner,state.map_owned_tokens_count, 0)
-    
-  // return the owner of the nonFungible Token
-  entrypoint owner_of(token_id: int) : address =
-    state.map_token_owner[token_id]
-    
-    
-  //  Mint a token. Only `owner` may call this function.
-  //  to The receiver of the token
-  // tokenURI The tokenURI of the the tokenURI
-  // asset properties of token assigned with tokenId
-  
-  stateful entrypoint mint(to : address, tokenUri : string,  InitialPrice : int, useTime: int) =
-    _mint(state._nextTokenId, to)
-    set_token_uri(state._nextTokenId, tokenUri)
-    let newassetProp: properties ={
-      InitialPrice= InitialPrice,
-      useTime=useTime,
-      lockTime= Chain.timestamp,
-      isContinous =false,
-      stage_1 = true,
-      stage_2 = false,
-      stage_3= false}
-    put(state{assetProperties[state._nextTokenId]= newassetProp})
-    put(state{_totalSupply = (state._totalSupply +1)})
-    put(state{_nextTokenId = (state._nextTokenId +1)})
-    
-   // stateful function for updating the asset name property of given TokenId 
-  stateful entrypoint updatePriceValue(tokenId :  int, LivePrice : int)=
-    only_token_owner(Call.caller, tokenId)
-    require(state.assetProperties[tokenId].isContinous == false, "asset is not time valued")
-    put(state{assetProperties[tokenId].InitialPrice = LivePrice})
-    
-   // return the option price value that is azssigned to token ID 
-  entrypoint getPriceValue(tokenId : int) : string =
-    state.assetProperties[tokenId].InitialPrice
+    // get approved for token
+    public entrypoint approvedForToken(_token_id: string) : option(address) =
+        Map.lookup(_token_id, state.token_approvals)
+            
+    // transfer token
+    public stateful entrypoint transfer (_to: address, _token_id: string) =
+        require(String.length(_token_id) >= 1, "Token Id required")
+      
+        clearApproval(Some(Call.caller), _token_id)
+        removeTokenFrom(Call.caller, _token_id)
+        addTokenTo(_to, _token_id) 
+        // Since reentrancy attacks not possible in sophia, so increment added first because of the below code effects but if there is another attack please feel free to suggest that i should put increment below decrement
+        
+        
+    // clear approval from a token
+    private stateful function clearApproval(_user: option(address), _token_id: string): bool =
+        require(ownerOfToken(_token_id) == _user, "For clearApproval Owner of token is not you!")
+        if(Map.member(_token_id, state.token_approvals))
+          Map.delete(_token_id, state.token_approvals)
+          true
+        else
+          false
+          
+    // add operation
+    private stateful function addTokenTo(_to: address, _token_id: string) =
+        require(String.length(_token_id) >= 1, "Token Id required")
 
-  // create option price with tokenid and for the address "to"
-  private stateful function _mint(token_id: int, to: address) = 
-    only_owner(Call.caller)
-    require(!check_token_exists(token_id), "Token can't be overrided")
+        put(state{token_owner[_token_id] = _to})
+        
+        let old_token_owns_value = Map.lookup(_to, state.token_owns)
+        if(old_token_owns_value == None)
+            put(state{token_owns[_to] = 1 })
+        else
+            put(state{token_owns[_to] = state.token_owns[_to] + 1})
+        put(state{token_own_names[_to] = [{[_token_id] = true}] })
+        
+    // remove operation
+    private stateful function removeTokenFrom(_from: address, _token_id: string): string =
+        require(String.length(_token_id) >= 1, "Token Id required")
+        if((ownerOfToken(_token_id) == Some(_from)) || (approvedForToken(_token_id) == Some(_from)))
+          Map.delete(_token_id, state.token_owner)
+          put(state{token_owns[_from] = state.token_owns[_from] - 1 })
+          put(state{token_own_names[Call.caller] = [{[_token_id] = false}] })
+          "Done"
+          
+        else  
+          "cannot done"
+            
+    // mint token
+    public stateful entrypoint mint(_token_id: string) =
+        require(String.length(_token_id) >= 1, "Token Id required")
+        require(ownerOfToken(_token_id) == None, "Token id already exist")
 
-    put(state{ 
-      map_token_owner[token_id] = to,
-      map_owned_tokens_count[to] = Map.lookup_default(to, state.map_owned_tokens_count, 0) + 1})
+        addTokenTo(Call.caller, _token_id)
 
-  // get approval for nonFungible Token 
-  entrypoint get_approved(token_id: int) : address =
-    state.map_token_approvals[token_id]
-  
-  entrypoint is_approved_for_all(owner: address, operator: address) : bool =
-    Map.lookup_default(operator, Map.lookup_default(owner, state.map_operator_approvals, {}) , false)
-  
-  /**
-     *  Returns an URI for a given token ID
-     * Throws if the token ID does not exist. May return an empty string.
-     */
-  entrypoint get_token_uri(token_id: int) : string =
-    Map.lookup_default(token_id, state.map_token_uris, "")
+    // burn token
+    public stateful entrypoint burn(_token_id: string) =
+        require(String.length(_token_id) >= 1, "Token Id required")
 
-    /**
-     *  function to set the token URI for a given token
-     * Reverts if the token ID does not exist
-     *  uri string URI to assign
-     */
-  private stateful function set_token_uri(token_id: int, uri: string) =
-    put(state{map_token_uris[token_id] = uri})
+        clearApproval(Some(Call.caller), _token_id)
+        removeTokenFrom(Call.caller, _token_id)
     
-/**
- *approval of token for the address "to"
- *revert if token id does not exists.
- */
-  stateful entrypoint approve(token_id: int, to: address) =
-    let owner: address = owner_of(token_id)
+    // approve someone (will have same rights as owner)
+    public stateful entrypoint approve(_to: address, _token_id: string) =
+        require(String.length(_token_id) >= 1, "Token Id required")
+        require(ownerOfToken(_token_id) == Some(Call.caller), "The owner is not you for this token id yet!.")
+
+        put(state{token_approvals[_token_id] = _to})
     
-    require(to != Call.caller, "Receiver can't be same as sender")
-    require(Call.caller == owner || is_approved_for_all(owner, Call.caller), "Not owner or not approved")
+    // get caller's sum of current owned tokens
+    public entrypoint sumOfTokenOwns (): option(int) =
+        Map.lookup(Call.caller, state.token_owns)
     
-    put(state{map_token_approvals[token_id] = to})
-
-  // tranfer the token from address to another address and owner of token approval is required
-  stateful entrypoint transfer_from(from: address, to: address, token_id: int) =
-    require(is_approved_or_owner(Call.caller, token_id), "Caller isn't approved or owner")
-    
-    clear_approval(from, token_id)
-    remove_token_from(from, token_id)
-    add_token_to(to, token_id)
-    
-// funtion for set approval for to addresss for transfer token
-  stateful entrypoint set_approval_for_all(to: address, approved: bool) =
-    put(state{map_operator_approvals[Call.caller = {}][to] = approved})
-  
- // Internal function for checking tokenId exists or not
-  private function check_token_exists(token_id: int) : bool =
-    switch(Map.lookup(token_id, state.map_token_owner))
-      None => false
-      Some(x) => true
-
-// Internal function for assigning the token to given address "to".
-  private stateful function add_token_to(to: address, token_id: int) = 
-    put(state{map_token_owner = state.map_token_owner{[token_id] = to}})
-    put(state{map_owned_tokens_count[to] = Map.lookup_default(to, state.map_owned_tokens_count, 0) + 1})
-
-  // private function for remove token from address
-  private stateful function remove_token_from(from: address, token_id: int) =
-    //put(state{map_token_owner = state.map_token_owner{[token_id] = #0}})
-    put(state{map_token_owner @ tp = Map.delete(token_id, tp)})
-    put(state{map_owned_tokens_count[from] = Map.lookup_default(from, state.map_owned_tokens_count, 0) - 1})
-
-// Internal function clear the approval that is given to tokenId
-  private stateful function clear_approval(from: address, token_id: int) = 
-    put(state{map_token_approvals @ mp=Map.delete(token_id, mp)})
-  private stateful function remove_token_metadata(token_id: int) = 
-    put(state{map_token_uris = state.map_token_uris{[token_id] = ""}})
-
-// private function for check address is owner or not
-  private function only_owner(owner : address) =
-    require(owner == state.owner, "Only owner can mint!")
-
-// Internal function for checking the address has given tokenId.
-  private function only_token_owner(owner: address, token_id: int)  =
-    require(owner == state.map_token_owner[token_id], "Only token owner can transfer!")
-
-// Internal function for giving approval to spender for given TokenId
-  private function is_approved_or_owner(spender: address, token_id: int) : bool = 
-    let owner : address = owner_of(token_id)
-    get_approved(token_id) == spender || owner == spender || is_approved_for_all(owner, spender)
+    // get list of tokens owner (true) or not have access to now (false)
+    public entrypoint allTokensOwnedOrNotNow () : option(list(map(string, bool))) = 
+        Map.lookup(Call.caller, state.token_own_names)
